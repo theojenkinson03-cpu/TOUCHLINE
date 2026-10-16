@@ -1214,7 +1214,8 @@ function proRelNote(k,v){return k==='c'?(v>=62?'You play the full game and he pi
 function proRel(s,dc,dm,why){const P=s?.pro;if(!P)return;if(P.mates==null)P.mates=58;if(dc)P.trust=clamp(P.trust+dc,0,100);if(dm)P.mates=clamp(P.mates+dm,0,100);const c=Math.round((dc||0)*10)/10,m=Math.round((dm||0)*10)/10;if(why&&(Math.abs(c)>=.5||Math.abs(m)>=.5))P.relLog=[{y:s.year,md:s.matchday||0,why,c,m},...(P.relLog||[])].slice(0,8)}
 // How your teammates' view of you turns into ball: a gate on your moments, how many a match can bring, and how often
 // play goes through you.
-function proMomentGate(P){return clamp(.42+(P?.mates??58)*.0075,.45,1)}
+function proMomentGate(P){return clamp(.35+(P?.mates??58)*.0115,.45,1)}
+function proMomentBoost(P){return 1+Math.max(0,(P?.mates??58)-60)/80}
 function proMomentCap(P){const m=P?.mates??58;return m>=78?7:m<30?4:m<45?5:6}
 function proBallFactor(P){return clamp(.55+(P?.mates??58)*.009,.6,1.45)}
 var proBallF=1;
@@ -1226,13 +1227,13 @@ function proMinutesPlan(M,s){const P=s.pro,MP=M.pro;if(!P||!MP||s.proTest)return
 function proPickBonus(s){return p=>p.pro?(s.pro.trust-50)/7:0}
 function proSelection(s){const me=proMeOf(s);if(!me)return {status:'none'};if(me.injuryRounds>0)return {status:'injured'};if(me.suspendedRounds>0)return {status:'suspended'};const f=nextUserFixture();if(!f)return {status:'nomatch'};const ids=autoLineup(s.team),i=ids.indexOf(me.id),ahead=available(s.team).filter(p=>p!==me&&p.pos===me.pos&&ids.slice(0,15).includes(p.id)).map(p=>p.name);return {status:i<0?'out':i<15?'start':'bench',no:i+1,ahead,opp:f.a===s.team?f.b:f.a,home:f.a===s.team}}
 // ---------- In-match player moments ----------
-function proPrep(M,s,mu){const P=s.pro;if(!P)return;const id=P.id,side=mu.idsA.includes(id)?'a':mu.idsB.includes(id)?'b':null;M.pr={id,v:(proHas(s,'biggame')&&(s.proTest||M.knockout))?.25:0,log:[]};M.proAuto=false;if(side)M.pro={id,side,captain:!!P.captain&&!s.proTest||!!s.proTestCaptain,n:0,cap:proMomentCap(P),gate:proMomentGate(P),gap:4,last:-99,kicks:0,kinds:{},capN:0};proBallF=proBallFactor(P);proMinutesPlan(M,s)}
+function proPrep(M,s,mu){const P=s.pro;if(!P)return;const id=P.id,side=mu.idsA.includes(id)?'a':mu.idsB.includes(id)?'b':null;M.pr={id,v:(proHas(s,'biggame')&&(s.proTest||M.knockout))?.25:0,log:[]};M.proAuto=false;if(side)M.pro={id,side,captain:!!P.captain&&!s.proTest||!!s.proTestCaptain,n:0,cap:proMomentCap(P),gate:proMomentGate(P),boost:proMomentBoost(P),gap:4,last:-99,kicks:0,kinds:{},capN:0};proBallF=proBallFactor(P);proMinutesPlan(M,s)}
 function proIn(M,X){const P=M.pro;return !!P&&P.side===X.k&&X.on.includes(P.id)}
 function proMe(M){return player(M.pro.id)}
 function proForward(M){return ['PR','HK','LK','BR'].includes(proMe(M)?.pos)}
 function proBackThree(M){const p=proMe(M);return p?.pos==='OB'||roleOf(p)==='FB'}
-function proCoverP(M){const pos=proMe(M)?.pos;return pos==='OB'?.4:['CE','FH','SH'].includes(pos)?.3:pos==='BR'?.24:.12}
-function proRuckP(M,possF){const pos=proMe(M)?.pos;return (pos==='BR'?.034:pos==='HK'?.024:['LK','PR'].includes(pos)?.02:pos==='CE'?.016:pos==='SH'?.012:.01)*possF}
+function proCoverP0(M){const pos=proMe(M)?.pos;return pos==='OB'?.4:['CE','FH','SH'].includes(pos)?.3:pos==='BR'?.24:.12}
+function proRuckP0(M,possF){const pos=proMe(M)?.pos;return (pos==='BR'?.034:pos==='HK'?.024:['LK','PR'].includes(pos)?.02:pos==='CE'?.016:pos==='SH'?.012:.01)*possF}
 function proMate(X,id){return [10,13,14,12,11,8,7].map(i=>X.on[i]).find(x=>x&&x!==id)||X.on.find(x=>x&&x!==id)}
 function proBin(M,X,m){const id=M.pro.id,slot=X.on.indexOf(id),p=player(id);if(slot<0||!p)return;X.bin.push({id,slot,until:m+10});X.on[slot]=null;engTouch(M,id,'yellow');const t=`${p.name} sin-binned for ten minutes.`;M.events.push({minute:m,team:X.team,text:t,points:0,p:id,card:'y'});engSay(M,m,'yellow',X,t,{p:id})}
 // Player career: your own moments (a line break, a jackal, a high ball, your throw...) and your kicks are yours to play
@@ -1240,7 +1241,10 @@ function proBin(M,X,m){const id=M.pro.id,slot=X.on.indexOf(id),p=player(id);if(s
 function proLive(M){return !!(M&&M.live&&!M.skipCalls&&!M.proAuto)}
 function proKickLive(M,X,m){return proLive(M)&&(M.s?.pro?.kickMode!=='big'||proGc(M,X,m,'pk'))}
 // How often a team-mate's line break is really yours: you are the runner, or the support on his shoulder.
-function proBreakP(M){const p=proMe(M),pos=p?.pos;return pos==='OB'||roleOf(p)==='FB'?.15:pos==='CE'?.15:pos==='FH'?.14:pos==='SH'?.08:pos==='BR'?.08:pos==='HK'||pos==='LK'?.03:.02}
+function proBreakP(M,...a){return proBreakP0(M,...a)*(M.pro?.boost||1)}
+function proCoverP(M,...a){return proCoverP0(M,...a)*(M.pro?.boost||1)}
+function proRuckP(M,...a){return proRuckP0(M,...a)*(M.pro?.boost||1)}
+function proBreakP0(M){const p=proMe(M),pos=p?.pos;return pos==='OB'||roleOf(p)==='FB'?.15:pos==='CE'?.15:pos==='FH'?.14:pos==='SH'?.08:pos==='BR'?.08:pos==='HK'||pos==='LK'?.03:.02}
 // Captaincy: earned with time at the club, five seasons, or three once you are 25. The coach then offers the armband
 // when you hold a starting place and he trusts you.
 function proClubYears(s){const P=s.pro,me=proMeOf(s);if(!me?.club)return 0;let n=0;for(let i=(P.seasons||[]).length-1;i>=0;i--){const r=P.seasons[i];if(r.club===me.club&&!r.loan)n++;else break}return n}
