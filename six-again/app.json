@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "6 Again",
+    "slug": "six-again",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "sixagain",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#12213b",
+    "primaryColor": "#ffd166",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "game.sixagain.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleDisplayName": "6 Again",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "game.sixagain.app",
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#12213b"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}

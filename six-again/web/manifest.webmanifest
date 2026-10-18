@@ -1,0 +1,17 @@
+{
+  "name": "6 Again — Rugby League Manager",
+  "short_name": "6 Again",
+  "description": "An offline rugby league manager: NRL and Super League careers, State of Origin, the World Cup and a player career.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f5ee",
+  "theme_color": "#12213b",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

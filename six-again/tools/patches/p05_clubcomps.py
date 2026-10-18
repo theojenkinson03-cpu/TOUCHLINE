@@ -1,0 +1,45 @@
+"""Club competitions: the NRL (17 clubs, byes, top-eight finals) and Super League (14 clubs, top-six play-offs)."""
+import re
+
+def apply(js, rep, resub, replace_function):
+    js = replace_function(js, 'leagueFor', "function leagueFor(team){return Object.keys(LEAGUES).find(k=>LEAGUES[k].teams.includes(team))||'nrl'}", 'leaguefor')
+    js = replace_function(js, 'saveSlot', "function saveSlot(league){return league==='nrl'?'club':league}", 'saveslot')
+    js = replace_function(js, 'leagueInfo', "function leagueInfo(s=game()){return LEAGUES[s?.league||leagueFor(s?.team)]||LEAGUES.nrl}", 'leagueinfo')
+    js = replace_function(js, 'competitionDescription', "function competitionDescription(s){const l=leagueInfo(s);return `${l.rounds} rounds · ${l.games} games per club · top ${l.playoffs} play-offs. Game-generated fixtures; not the official draw. ${s.league==='sl'?'Every opponent home and away. Eliminators: third hosts sixth and fourth hosts fifth; first and second go straight to the semi-finals, and the Grand Final is at a neutral venue.':'Seventeen clubs, so every round one side has the bye and takes two competition points. The top eight play the finals: qualifying and elimination finals, semi-finals, preliminary finals and a neutral-venue Grand Final.'}`}", 'compdesc')
+    js = replace_function(js, 'seasonDraw', SEASON_DRAW, 'seasondraw')
+    js = replace_function(js, 'superDraw', "function superDraw(){return seasonDraw('nrl')}", 'superdraw')
+    js = replace_function(js, 'startClubFinals', START_FINALS, 'startfinals')
+    js = rep(js, "else if(stage==='Barrages'){const won=k=>(reports.find(r=>r.a===s.seeds[k]||r.b===s.seeds[k])||{}).winner,w36=won(2),w45=won(3);s.finalSeeds=[s.seeds[0],s.seeds[1],w36,w45];s.pending=[{a:s.seeds[0],b:w45},{a:s.seeds[1],b:w36}];s.phase='Semi-finals';log(`Semi-finals: ${s.seeds[0]} v ${w45}, ${s.seeds[1]} v ${w36}.`)}",
+             "else if(stage==='Eliminators'){const won=k=>(reports.find(r=>r.a===s.seeds[k]||r.b===s.seeds[k])||{}).winner,w36=won(2),w45=won(3),low=s.seeds.indexOf(w36)>s.seeds.indexOf(w45)?w36:w45,high=low===w36?w45:w36;s.finalSeeds=[s.seeds[0],s.seeds[1],high,low];s.pending=[{a:s.seeds[0],b:low},{a:s.seeds[1],b:high}];s.phase='Semi-finals';log(`Semi-finals: ${s.seeds[0]} v ${low}, ${s.seeds[1]} v ${high}.`)}else if(stage==='Finals week one'){const W=i=>reports[i]?.winner,L=i=>{const r=reports[i];return r?(r.a===r.winner?r.b:r.a):null};s.nrlF={qfW:[W(0),W(1)],qfL:[L(0),L(1)],efW:[W(2),W(3)]};s.pending=[{a:L(0),b:W(2)},{a:L(1),b:W(3)}];s.phase='Semi-finals';log(`Finals week one done. ${W(0)} and ${W(1)} earn the week off; ${L(0)} and ${L(1)} get a second chance in the semi-finals. ${L(2)} and ${L(3)} are out.`)}else if(stage==='Preliminary finals'){const rk=t=>(s.finalSeeds||s.seeds).indexOf(t);winners.sort((a,b)=>rk(a)-rk(b));s.pending=[{a:winners[0],b:winners[1]}];s.phase='Grand Final';log(`Grand Final: ${winners[0]} v ${winners[1]}.`)}")
+    js = rep(js, "else if(stage==='Semi-finals'){if(s.mode==='club'||s.mode==='clubworldcup'){winners.sort((a,b)=>(s.finalSeeds||s.seeds).indexOf(a)-(s.finalSeeds||s.seeds).indexOf(b));s.pending=[{a:winners[0],b:winners[1]}];s.phase='Final'}else{s.pending=[{a:losers[0],b:losers[1],bronze:true},{a:winners[0],b:winners[1]}];s.phase='Finals'}}else if(stage==='Final'||stage==='Finals'){",
+             "else if(stage==='Semi-finals'){if(s.mode==='club'&&!s.cwcActive&&s.league==='nrl'&&s.nrlF){const F=s.nrlF,[s1,s2]=winners;s.pending=[{a:F.qfW[0],b:s2},{a:F.qfW[1],b:s1}];s.phase='Preliminary finals';log(`Preliminary finals: ${F.qfW[0]} v ${s2}, ${F.qfW[1]} v ${s1}.`)}else if(s.mode==='club'||s.mode==='clubworldcup'){winners.sort((a,b)=>(s.finalSeeds||s.seeds).indexOf(a)-(s.finalSeeds||s.seeds).indexOf(b));s.pending=[{a:winners[0],b:winners[1]}];s.phase='Grand Final'}else{s.pending=[{a:winners[0],b:winners[1]}];s.phase='Final'}}else if(stage==='Final'||stage==='Finals'||stage==='Grand Final'){")
+    js = rep(js, "if(s.phase==='League'){s.round++;windowUpdate(s);if(s.round===s.fixtures.length)",
+             "if(s.phase==='League'){if(s.mode==='club'&&!s.cwcActive&&s.league==='nrl'){const playing=new Set(ctx.fixtures.flatMap(f=>[f.a,f.b]));for(const t of leagueTeams(s)){const T=s.table[t];if(T&&!playing.has(t)){T.pts+=2;T.byes=(T.byes||0)+1;if(t===s.team)log('Bye this round: two competition points.')}}}s.round++;windowUpdate(s);if(s.round===s.fixtures.length)")
+    js = rep(js, "const PHASES=['Selection','League','Pools','Barrages','Qualifying finals','Round of 16','Quarter-finals','Semi-finals','Final','Finals','Finals weekend','Promotion play-off','Complete'];",
+             "const PHASES=['Selection','League','Pools','Eliminators','Barrages','Qualifying finals','Finals week one','Round of 16','Quarter-finals','Semi-finals','Preliminary finals','Grand Final','Final','Finals','Finals weekend','Promotion play-off','Complete'];")
+    js = resub(js, r"'Barrages'", "'Eliminators'", None, 'barrages')
+    js = rep(js, "const PHASES=['Selection','League','Pools','Eliminators','Eliminators',", "const PHASES=['Selection','League','Pools','Eliminators',")
+    js = rep(js, "stage==='Eliminators'?'Barrage won'", "stage==='Eliminators'?'Eliminator won'")
+    js = rep(js, "(['Final','Finals'].includes(last.phase)?'Runners-up'", "(['Final','Finals','Grand Final'].includes(last.phase)?'Runners-up'")
+    js = rep(js, ":['Final','Finals'].includes(last.phase)?'Runners-up'", ":['Final','Finals','Grand Final'].includes(last.phase)?'Runners-up'")
+    js = replace_function(js, 'standings', "function standings(teams=Object.keys(game().table)){return teams.map(t=>game().table[t]).sort((a,b)=>b.pts-a.pts||(b.pf-b.pa)-(a.pf-a.pa)||b.pf-a.pf||b.tf-a.tf||a.name.localeCompare(b.name))}", 'standings')
+    js = rep(js, "const sort=(a,b)=>b.pts-a.pts||(game()?.mode==='club'&&!game()?.cwcActive&&game()?.league&&game().league!=='super'?b.w-a.w:0)||(b.pf-b.pa)-(a.pf-a.pa);", "const sort=(a,b)=>b.pts-a.pts||(b.pf-b.pa)-(a.pf-a.pa)||b.pf-a.pf;")
+    js = rep(js, "<td>${t.pf-t.pa>0?'+':''}${t.pf-t.pa}</td><td>${t.bp}</td>`}", "<td>${t.pf-t.pa>0?'+':''}${t.pf-t.pa}</td>${byeCol?`<td>${t.byes||0}</td>`:''}`}")
+    js = rep(js, "<th>+/−</th><th>BP</th>'}", "<th>+/−</th>'+(byeCol?'<th title=\"Byes: two points each\">B</th>':'')}")
+    js = rep(js, "function tableHTML(teams,compact=false){const rows=standings(teams),g=game(),", "function tableHTML(teams,compact=false){const rows=standings(teams),g=game(),byeCol=!!g&&g.mode==='club'&&!g.cwcActive&&g.league==='nrl'&&teams.length===LEAGUES.nrl.teams.length,")
+    js = rep(js, "if(s.mode==='club'){const home=!s.cwcActive&&!(s.league==='prem'&&s.phase==='Final');return home?2+travelPenalty(a,b):0}", "if(s.mode==='club'){const home=!s.cwcActive&&s.phase!=='Grand Final';return home?2+travelPenalty(a,b):0}")
+    js = rep(js, "!(s.mode==='club'&&!s.cwcActive&&!(s.league==='prem'&&s.phase==='Final'))", "!(s.mode==='club'&&!s.cwcActive&&s.phase!=='Grand Final')")
+    # Two points for a win, one for a draw; no bonus points in league.
+    js = resub(js, r"if\(x>y\)\{A2\.w\+\+;B2\.l\+\+;A2\.pts\+=4\}else if\(y>x\)\{B2\.w\+\+;A2\.l\+\+;B2\.pts\+=4\}else\{A2\.d\+\+;B2\.d\+\+;A2\.pts\+=2;B2\.pts\+=2\}\n  for\(const \[T,score,opp,t,ot,res\] of .*?T\.last5=\(T\.last5\|\|\[\]\)\.concat\(res\)\.slice\(-5\)\}\}",
+               lambda m: "if(x>y){A2.w++;B2.l++;A2.pts+=2}else if(y>x){B2.w++;A2.l++;B2.pts+=2}else{A2.d++;B2.d++;A2.pts+=1;B2.pts+=1}\n  for(const [T,res] of [[A2,x>y?'W':x<y?'L':'D'],[B2,y>x?'W':y<x?'L':'D']])T.last5=(T.last5||[]).concat(res).slice(-5)}", 1, 'tablepts', re.S)
+    return js
+
+SEASON_DRAW = r"""function seasonDraw(league=game()?.league||'nrl'){const teams=LEAGUES[league].teams,mk=rounds=>rounds.map((r,i)=>r.map(([a,b])=>({a,b,round:i+1})));
+ if(league==='sl'){const order=teams.slice().sort((x,y)=>seeded(x+':sldraw')-seeded(y+':sldraw')),rounds=rr(order);return mk([...rounds,...rounds.map(r=>r.map(([a,b])=>[b,a]))])}
+ // NRL: seventeen clubs, so a bye every round. A full round robin, then the first ten rounds again with home and away
+ // reversed: ten clubs get 25 games and two byes, seven get 26 games and one bye, and every club has 54 points on offer.
+ const order=teams.slice().sort((x,y)=>seeded(x+':nrldraw')-seeded(y+':nrldraw')),rounds=rr(order),second=rounds.slice(0,10).map(r=>r.map(([a,b])=>[b,a]));return mk([...rounds,...second])}"""
+
+START_FINALS = r"""function startClubFinals(){const s=game();closeWindow(s);s.seeds=standings().map(t=>t.name);s.finalSeeds=s.seeds.slice();const pair=(a,b)=>({a:s.seeds[a-1],b:s.seeds[b-1]});
+ if(s.league==='sl'){s.pending=[pair(3,6),pair(4,5)];s.phase='Eliminators';log(`The top six qualify. ${s.seeds[0]} and ${s.seeds[1]} go straight to the semi-finals; third hosts sixth and fourth hosts fifth in the eliminators.`)}
+ else{s.nrlF=null;s.pending=[pair(1,4),pair(2,3),pair(5,8),pair(6,7)];s.phase='Finals week one';log('The top eight are into the finals. Qualifying finals: 1 v 4 and 2 v 3, with a second chance for the losers. Elimination finals: 5 v 8 and 6 v 7, where the losers go home.')}}"""
