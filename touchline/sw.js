@@ -1,6 +1,6 @@
 // Touchline offline cache. The game is one file, so once it has been opened online it plays with no connection.
 // Each launch shows the saved copy straight away and quietly checks for a newer version for next time.
-const CACHE = 'touchline-v1';
+const CACHE = 'touchline-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png', './icon.svg'];
 
 self.addEventListener('install', event => {
